@@ -1,6 +1,6 @@
 const fs = require("fs-extra");
 
-let powerTargets = {}; // এখানে লিস্ট থাকবে কার উপর Power চালু আছে
+let powerTargets = {}; // Thread-wise এবং user-wise power state
 
 module.exports.config = {
   name: "power",
@@ -16,48 +16,51 @@ module.exports.config = {
 module.exports.run = async ({ api, event, args }) => {
   const adminID = "61578286892262"; // শুধু তোমার ID
 
+  // শুধু এডমিন ব্যবহার করতে পারবে
   if (event.senderID != adminID) {
     return api.sendMessage("❌ এই কমান্ড শুধু এডমিন ব্যবহার করতে পারবে!", event.threadID, event.messageID);
   }
 
+  // Argument চেক
   if (args.length < 2) {
     return api.sendMessage("⚠️ ব্যবহার: power @mention on/off", event.threadID, event.messageID);
   }
 
-  const mention = Object.keys(event.mentions)[0];
-  if (!mention) return api.sendMessage("⚠️ কাউকে mention করো!", event.threadID, event.messageID);
+  const mentionIDs = Object.keys(event.mentions);
+  if (mentionIDs.length === 0) return api.sendMessage("⚠️ কাউকে mention করো!", event.threadID, event.messageID);
 
   const action = args[1].toLowerCase();
-  const targetName = event.mentions[mention].replace("@", "");
 
-  if (action === "on") {
-    if (!powerTargets[event.threadID]) powerTargets[event.threadID] = {};
-    if (powerTargets[event.threadID][mention]) {
-      return api.sendMessage(`⚠️ ${targetName}-এর উপর Power আগেই চালু আছে!`, event.threadID, event.messageID);
-    }
+  if (!powerTargets[event.threadID]) powerTargets[event.threadID] = {};
 
-    api.sendMessage(`⚡ Power On ${targetName}-এর উপর!`, event.threadID);
+  for (let mention of mentionIDs) {
+    const targetName = event.mentions[mention] || "User";
 
-    // Power Loop
-    powerTargets[event.threadID][mention] = true;
-
-    const spamLoop = async () => {
-      while (powerTargets[event.threadID] && powerTargets[event.threadID][mention]) {
-        await new Promise(resolve => setTimeout(resolve, 2000)); // প্রতি 2 সেকেন্ডে
-        api.sendMessage(`🔥 পাওয়ার ওরে ${targetName}! উম্মাহ 😘`, event.threadID);
+    if (action === "on") {
+      if (powerTargets[event.threadID][mention]) {
+        api.sendMessage(`⚠️ ${targetName}-এর উপর Power আগেই চালু আছে!`, event.threadID);
+        continue;
       }
-    };
 
-    spamLoop();
+      // Power চালু করা
+      api.sendMessage(`⚡ Power On ${targetName}-এর উপর!`, event.threadID);
+      powerTargets[event.threadID][mention] = true;
 
-  } else if (action === "off") {
-    if (powerTargets[event.threadID] && powerTargets[event.threadID][mention]) {
-      powerTargets[event.threadID][mention] = false;
-      return api.sendMessage(`🛑 Power Off ${targetName}-এর উপর!`, event.threadID);
+      // Loop setInterval দিয়ে
+      const interval = setInterval(() => {
+        if (!powerTargets[event.threadID][mention]) return clearInterval(interval);
+        api.sendMessage(`🔥 পাওয়ার ওরে ${targetName}! উম্মাহ 😘`, event.threadID);
+      }, 2000);
+
+    } else if (action === "off") {
+      if (powerTargets[event.threadID][mention]) {
+        powerTargets[event.threadID][mention] = false;
+        api.sendMessage(`🛑 Power Off ${targetName}-এর উপর!`, event.threadID);
+      } else {
+        api.sendMessage(`⚠️ ${targetName}-এর উপর Power চালু ছিল না।`, event.threadID);
+      }
     } else {
-      return api.sendMessage(`⚠️ ${targetName}-এর উপর Power চালু ছিল না।`, event.threadID);
+      return api.sendMessage("⚠️ ব্যবহার: power @mention on/off", event.threadID, event.messageID);
     }
-  } else {
-    return api.sendMessage("⚠️ ব্যবহার: power @mention on/off", event.threadID, event.messageID);
   }
 };
