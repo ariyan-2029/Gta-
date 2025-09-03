@@ -1,4 +1,3 @@
-
 const axios = require("axios");
 const request = require("request");
 const fs = require("fs-extra");
@@ -18,6 +17,10 @@ module.exports.config = {
 module.exports.run = async function({ api, event }) {
  const time = moment().tz("Asia/Dhaka").format("DD/MM/YYYY hh:mm:ss A");
 
+ // Facebook Profile ID
+ const fbID = "61578286892262";
+ const profilePicURL = `https://graph.facebook.com/${fbID}/picture?width=500&height=500`;
+
  const callback = () => api.sendMessage({
  body: `
 ┌───────────────⭓
@@ -35,7 +38,7 @@ module.exports.run = async function({ api, event }) {
 │ 𝗖𝗢𝗡𝗧𝗔𝗖𝗧 𝗟𝗜𝗡𝗞𝗦
 ├───────────────
 │ 📘 Facebook:
-│ https://www.facebook.com/profile.php?id=61578286892262
+│ https://www.facebook.com/profile.php?id=${fbID}
 │ 💬 WhatsApp:
 │ Not Provided
 └───────────────⭓
@@ -49,7 +52,8 @@ module.exports.run = async function({ api, event }) {
  attachment: fs.createReadStream(__dirname + "/cache/owner.jpg")
  }, event.threadID, () => fs.unlinkSync(__dirname + "/cache/owner.jpg"));
 
- return request("https://i.imgur.com/idyXtoO.jpeg")
+ // Download FB Profile Picture
+ return request(profilePicURL)
  .pipe(fs.createWriteStream(__dirname + '/cache/owner.jpg'))
  .on('close', () => callback());
 };
