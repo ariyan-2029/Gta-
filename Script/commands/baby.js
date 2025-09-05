@@ -1,5 +1,5 @@
 const axios = require("axios");
-const simsim = "https://api.affiliateplus.xyz/api/chatbot";
+const simsim = "https://simsimi.cyberbot.top";
 
 module.exports.config = {
  name: "baby",
